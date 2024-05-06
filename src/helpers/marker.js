@@ -3,7 +3,6 @@ export const Marker = (google) => ({
     const marker = new google.maps.Marker({
       position: coord,
       identificador: 1,
-      /*       icon: "assets/markers/next.svg", */
     })
     return marker
   },
@@ -33,7 +32,7 @@ export const Marker = (google) => ({
   operator: (coord) => {
     const marker = new google.maps.Marker({
       draggable: true,
-      title: "Hola",
+      title: 'Hola',
       identificador: 1,
       position: coord,
     })

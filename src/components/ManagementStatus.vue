@@ -1,14 +1,14 @@
 <template>
   <div
     class="container-status"
-    :style="{ 'background-color': $store.state.COLOR[$store.state.status] }"
+    :style="{ 'background-color': management.COLOR[management.status] }"
   >
     <!-- Boton status -->
 
     <input
       class="btn btn-status text-left"
       type="text"
-      v-model="$store.state.status"
+      v-model="management.status"
       readonly
       data-toggle="modal"
       data-target="#modalStatus"
@@ -19,9 +19,9 @@
     <input
       class="btn btn-status text-left"
       type="text"
-      v-model="$store.state.subStatus"
+      v-model="management.subStatus"
       :class="
-        $store.state.SUB_STATUS[$store.state.status].length == 0
+        management.SUB_STATUS[management.status].length == 0
           ? 'subDisabled'
           : ''
       "
@@ -31,17 +31,18 @@
     />
     <StatusModal></StatusModal>
     <SubStatusModal
-      :status="$store.state.SUB_STATUS[$store.state.status]"
+      :status="management.SUB_STATUS[management.status]"
     ></SubStatusModal>
   </div>
 </template>
 <script>
-import StatusModal from "../components/modals/StatusModal.vue"
-import SubStatusModal from "../components/modals/SubStatusModal.vue"
+import { mapState } from 'vuex'
+import StatusModal from '../components/modals/StatusModal.vue'
+import SubStatusModal from '../components/modals/SubStatusModal.vue'
 export default {
   components: { StatusModal, SubStatusModal },
-  data() {
-    return {}
+  computed: {
+    ...mapState(['management']),
   },
 }
 </script>

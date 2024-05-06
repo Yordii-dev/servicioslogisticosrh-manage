@@ -1,5 +1,11 @@
 <template>
-  <div>
+  <div class="container-handle">
+    <RedirectInfo
+      v-show="visibleRedirectInfo"
+      :tittle="redirectInfoProps.tittle"
+      :detail="redirectInfoProps.detail"
+      :pageToReturn="redirectInfoProps.pageToReturn"
+    />
     <div class="user">
       <div class="destinatario">
         <div
@@ -21,19 +27,19 @@
 
     <!-- Items -->
     <router-link
-      :class="{ disabled: itemsManaged }"
+      :class="{ disabled: ordersManaged }"
       class="nav-link p-0"
-      :to="{ name: 'items' }"
+      :to="{ name: 'orders' }"
     >
       <div class="items">
         <div class="item">
           <p class="h6">Items</p>
-          <span>{{ itemsAmount }} bultos</span>
+          <span>{{ totalOrders }} bultos</span>
         </div>
         <i
           :class="{
-            'fa-solid fa-chevron-right text-success': !itemsManaged,
-            'fa-circle-check text-success fa-solid': itemsManaged,
+            'fa-solid fa-chevron-right text-success': !ordersManaged,
+            'fa-circle-check text-success fa-solid': ordersManaged,
           }"
         >
         </i>
@@ -46,16 +52,16 @@
         disabled: !ACCESS_FORM[subStatus] || evidenced,
       }"
       class="nav-link p-0"
-      :to="{ name: 'form' }"
+      :to="{ name: 'evidence' }"
     >
-      <div class="formulario">
+      <div class="evidencia">
         <h6>
           {{
             evidenced
-              ? "Evidencia enviada"
+              ? 'Evidencia enviada'
               : ACCESS_FORM[subStatus]
-              ? "Formulario disponible"
-              : "Formulario no disponible"
+              ? 'Enviar evidencia'
+              : 'Enviar evidencia [No disponible]'
           }}
         </h6>
 
@@ -75,107 +81,157 @@
     <button
       class="btnConfirmar"
       data-toggle="modal"
+      data-target="#modalConfirmarGestion"
       :style="{ 'background-color': COLOR[status] }"
       :class="{
         btnDisabled:
           SUB_STATUS[status].length != 0 &&
           subStatus == 'Seleccionar sub estado',
       }"
-      data-target="#modalConfirmarGestion"
     >
       <h5 class="my-0">Confirmar gestion</h5>
       <i class="fa-solid fa-check-double"></i>
     </button>
 
-    <ManagementConfirm @error="emitError"></ManagementConfirm>
-    <div
-      v-show="error != false"
-      class="fixed-bottom alert-danger w-100 py-3 text-center"
-    >
-      {{ error }}
-    </div>
+    <ManagementConfirmModal></ManagementConfirmModal>
   </div>
 </template>
 <script>
-import { mapState } from "vuex"
-import ManagementConfirm from "../components/modals/ManagementConfirm.vue"
-import ManagementStatus from "../components/ManagementStatus.vue"
+import { mapMutations, mapState } from 'vuex'
+import ManagementConfirmModal from '../components/modals/ManagementConfirmModal.vue'
+import ManagementStatus from '../components/ManagementStatus.vue'
+import RedirectInfo from '@/components/RedirectInfo.vue'
+import { validateHandlePage } from '../validations/validateHandlePage'
+import { loaderPage } from '@/helpers/loaderPage'
 
 export default {
-  components: { ManagementConfirm, ManagementStatus },
+  components: { ManagementConfirmModal, ManagementStatus, RedirectInfo },
   data() {
     return {
-      deliveryId: localStorage.getItem("deliveryId"),
-
-      managed: true,
-      itemsManaged: true,
+      deliveryId: localStorage.getItem('deliveryId'),
+      visibleRedirectInfo: false,
+      redirectInfoProps: {},
+      ordersManaged: true,
       evidenced: true,
 
       client: {
-        id: "...",
-        name: "...",
+        id: '...',
+        name: '...',
       },
-      itemsAmount: "...",
-
-      error: false,
+      totalOrders: '...',
     }
   },
   computed: {
-    ...mapState(["COLOR", "ACCESS_FORM", "SUB_STATUS", "status", "subStatus"]),
+    ...mapState(['management']),
+    COLOR() {
+      return this.management.COLOR
+    },
+    ACCESS_FORM() {
+      return this.management.ACCESS_FORM
+    },
+    SUB_STATUS() {
+      return this.management.SUB_STATUS
+    },
+    status() {
+      return this.management.status
+    },
+    subStatus() {
+      return this.management.subStatus
+    },
   },
   methods: {
-    async getDeliveryDetails() {
+    ...mapMutations([
+      'setAppError',
+      'setManagementActiveTab',
+      'setManagementHideHeader',
+    ]),
+    async getDeliveryDetail(deliveryId) {
       try {
-        const URL = `${process.env.VUE_APP_API}/deliveryDetails/${this.deliveryId}`
-        let res = await fetch(URL, {
-            headers: {
-              Authorization: "Bearer " + localStorage.getItem("token_user"),
-            },
-          }),
-          json = await res.json()
-        return json
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/detail/${deliveryId}`
+
+        let res = await fetch(URL),
+          response = await res.json()
+        if (response.error) throw response
+        return response
       } catch (error) {
-        this.error = `Error al obtener detalle de entrega: ${error}`
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener detalle de entrega` + error
+        this.setAppError(message)
       }
     },
-    emitError(error) {
-      this.error = `Error al confirmar gestion: ${error}`
+    async getClient(deliveryId) {
+      try {
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/client/${deliveryId}`
+
+        let res = await fetch(URL),
+          response = await res.json()
+        if (response.error) throw response
+        return response
+      } catch (error) {
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener cliente de entrega` + error
+        this.setAppError(message)
+      }
     },
-    validateManaged(managed) {
-      if (managed) {
-        this.$router.push({ name: "deliveries" })
+    async getTotalOrders(deliveryId) {
+      try {
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/orders-total/${deliveryId}`
+
+        let res = await fetch(URL),
+          response = await res.json()
+        if (response.error) throw response
+        return response
+      } catch (error) {
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener cliente de entrega` + error
+        this.setAppError(message)
       }
     },
   },
   async mounted() {
-    let loader = this.$loading.show({
-      // Optional parameters
-      container: false,
-      canCancel: false,
-      color: "rgb(27, 209, 155)",
-      height: "40",
-      onCancel: this.onCancel,
-    })
+    let loader = loaderPage(this.$loading) //Loader desde validar
+    this.setManagementHideHeader(false)
+    this.setManagementActiveTab('gestion')
+    let { validate, pageToReturn } = await validateHandlePage()
+    if (validate.error) throw validate
 
-    //Show Nav
-    this.$store.state.hideNav = false
-    const deliveryDetails = await this.getDeliveryDetails()
-    if (typeof deliveryDetails === "undefined") return
-
-    if (deliveryDetails !== null) {
-      this.managed = deliveryDetails.managed
-      this.validateManaged(this.managed)
-
-      this.itemsManaged = deliveryDetails.itemsManaged
-      this.evidenced = deliveryDetails.evidenced
-
-      this.client = deliveryDetails.client
-      this.itemsAmount = deliveryDetails.itemsAmount
+    if (validate.status == 'fail') {
+      this.visibleRedirectInfo = true
+      this.redirectInfoProps = {
+        tittle: validate.data.message,
+        detail: validate.data.details,
+        pageToReturn: pageToReturn,
+      }
       loader.hide()
-    } else {
-      alert("DeliveryId desconocido")
-      console.log("DeliveryId desconocido")
+      return
     }
+
+    let responseDetail = await this.getDeliveryDetail(this.deliveryId)
+
+    if (typeof responseDetail == 'undefined') return
+    if (responseDetail.status == 'success') {
+      this.ordersManaged = responseDetail.data.detail.ordersManaged
+      this.evidenced = responseDetail.data.detail.evidenced
+    }
+
+    //getClient
+    let responseClient = await this.getClient(this.deliveryId)
+    if (typeof responseClient == 'undefined') return
+    if (responseClient.status == 'success') {
+      this.client = responseClient.data.client
+    }
+
+    //getTotalOrders
+    let responseTotalOrders = await this.getTotalOrders(this.deliveryId)
+    if (typeof responseTotalOrders == 'undefined') return
+    if (responseTotalOrders.status == 'success') {
+      this.totalOrders = responseTotalOrders.data.total
+    }
+
+    loader.hide()
   },
 }
 </script>
@@ -193,7 +249,7 @@ export default {
 }
 
 .items,
-.formulario {
+.evidencia {
   display: flex;
   justify-content: space-between;
   align-items: center;

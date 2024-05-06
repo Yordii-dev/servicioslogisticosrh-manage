@@ -1,4 +1,4 @@
-export const Geolocation = (google) => ({
+const Geolocation = () => ({
   watchPosition: (success) => {
     const n = navigator
     const error = (err) => {
@@ -17,12 +17,7 @@ export const Geolocation = (google) => ({
       const n = navigator
 
       const success = (position) => {
-        let coord = new google.maps.LatLng(
-          position.coords.latitude,
-          position.coords.longitude
-        )
-
-        res(coord)
+        res(position)
       }
       const error = (err) => {
         console.log(err)
@@ -36,3 +31,5 @@ export const Geolocation = (google) => ({
     })
   },
 })
+
+export default Geolocation

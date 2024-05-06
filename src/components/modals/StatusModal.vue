@@ -10,17 +10,24 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-body content">
-          <p data-dismiss="modal" @click="setStatus('En Ruta')">En Ruta</p>
-          <p data-dismiss="modal" @click="setStatus('Entregado')">Entregado</p>
-          <p data-dismiss="modal" @click="setStatus('No Entregado')">
+          <p data-dismiss="modal" @click="setManagementStatus('En Ruta')">
+            En Ruta
+          </p>
+          <p data-dismiss="modal" @click="setManagementStatus('Entregado')">
+            Entregado
+          </p>
+          <p data-dismiss="modal" @click="setManagementStatus('No Entregado')">
             No Entregado
           </p>
-          <p data-dismiss="modal" @click="setStatus('Entrega Parcial')">
+          <p
+            data-dismiss="modal"
+            @click="setManagementStatus('Entrega Parcial')"
+          >
             Entrega Parcial
           </p>
           <p
             data-dismiss="modal"
-            @click="setStatus('Devoluciones Programadas')"
+            @click="setManagementStatus('Devoluciones Programadas')"
           >
             Devoluciones Programadas
           </p>
@@ -33,10 +40,10 @@
   </div>
 </template>
 <script>
-import { mapMutations } from "vuex"
+import { mapMutations } from 'vuex'
 export default {
   methods: {
-    ...mapMutations(["setStatus"]),
+    ...mapMutations(['setManagementStatus']),
   },
 }
 </script>

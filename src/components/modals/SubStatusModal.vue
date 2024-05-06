@@ -14,7 +14,7 @@
             v-for="value in status"
             :key="value"
             data-dismiss="modal"
-            @click="setSubStatus(value)"
+            @click="setManagementSubStatus(value)"
           >
             {{ value }}
           </p>
@@ -27,11 +27,11 @@
   </div>
 </template>
 <script>
-import { mapMutations } from "vuex"
+import { mapMutations } from 'vuex'
 export default {
-  props: ["status"],
+  props: ['status'],
   methods: {
-    ...mapMutations(["setSubStatus"]),
+    ...mapMutations(['setManagementSubStatus']),
   },
 }
 </script>

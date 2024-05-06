@@ -1,14 +1,20 @@
 <template>
   <div class="container">
+    <RedirectInfo
+      v-show="visibleRedirectInfo"
+      :tittle="redirectInfoProps.tittle"
+      :detail="redirectInfoProps.detail"
+      :pageToReturn="redirectInfoProps.pageToReturn"
+    />
     <div class="addressee card p-3 mb-3 mt-3">
       <span>Destinatario</span>
-      <p class="h6 mt-2 mb-5">{{ addressee.name }}</p>
+      <p class="h6 mt-2 mb-5">{{ client.name }}</p>
 
       <div
         class="contacts float-right align-self-end d-flex justify-content-between"
       >
         <a
-          :href="'tel:+51' + addressee.phone"
+          :href="'tel:+51' + client.phone"
           class="call text-primary d-flex align-items-center text-decoration-none"
         >
           <i class="fa-solid fa-phone"></i>
@@ -105,132 +111,158 @@
 
     <div class="d-flex delivery-address card p-3 pb-0 mt-3">
       <span>Direccion de entrega</span>
-      <p class="h6 mt-2 mb-5">{{ addressee.address }}</p>
+      <p class="h6 mt-2 mb-5">{{ client.address }}</p>
 
       <div class="map text-primary align-self-end d-flex align-items-center">
         <i class="fa-solid fa-diamond-turn-right"></i>
         <a href="singleMap">Mapa</a>
       </div>
     </div>
-    <div
-      v-show="error != false"
-      class="fixed-bottom alert-danger w-100 py-3 text-center"
-    >
-      {{ error }}
-    </div>
   </div>
 </template>
 
 <script>
-import NotifyModal from "../components/modals/NotifyModal.vue"
+import { mapMutations } from 'vuex'
+import NotifyModal from '../components/modals/NotifyModal.vue'
+import { validateInfoPage } from '../validations/validateInfoPage'
+import { loaderPage } from '@/helpers/loaderPage'
+import RedirectInfo from '@/components/RedirectInfo.vue'
+
 export default {
-  components: { NotifyModal },
+  components: { NotifyModal, RedirectInfo },
   data() {
     return {
-      deliveryId: localStorage.getItem("deliveryId"),
-
-      addressee: {
-        name: "",
-        phone: "",
-        address: "",
+      deliveryId: localStorage.getItem('deliveryId'),
+      visibleRedirectInfo: false,
+      redirectInfoProps: {},
+      client: {
+        name: '',
+        phone: '',
+        address: '',
       },
 
       manager: {},
       supervisor: {},
-
-      error: false,
     }
   },
 
   methods: {
-    async getDeliveryDetails() {
+    ...mapMutations([
+      'setAppError',
+      'setManagementHideHeader',
+      'setManagementActiveTab',
+    ]),
+    async getClient(deliveryId) {
       try {
-        const URL = `${process.env.VUE_APP_API}/deliveryDetails/${this.deliveryId}`
-        let res = await fetch(URL, {
-            headers: {
-              Authorization: "Bearer " + localStorage.getItem("token_user"),
-            },
-          }),
-          json = await res.json()
-        return json
-      } catch (error) {
-        this.error = `Error al obtener detalle de entrega: ${error}`
-      }
-    },
-
-    async getManager(idDelivery) {
-      try {
-        const URL = `${process.env.VUE_APP_API}/extraDelivery/manager/${idDelivery}`
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/client/${deliveryId}`
 
         let res = await fetch(URL),
-          json = await res.json()
-
-        if (json.length == 0) return { cod: "×", name: "×", phone: "×" }
-
-        return json[0]
+          response = await res.json()
+        if (response.error) throw response
+        return response
       } catch (error) {
-        this.error += `Error al obtener gestor: ${error}`
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener cliente de entrega` + error
+        this.setAppError(message)
       }
     },
-    async getSupervisor(idDelivery) {
+    async getManager(deliveryId) {
       try {
-        const URL = `${process.env.VUE_APP_API}/extraDelivery/supervisor/${idDelivery}`
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/extra-manager/${deliveryId}`
 
         let res = await fetch(URL),
-          json = await res.json()
-        if (json.length == 0) return { name: "×", phone: "×" }
-
-        return json[0]
+          response = await res.json()
+        if (response.error) throw response
+        return response
       } catch (error) {
-        this.error += `Error al obtener supervisor: ${error}`
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener manager de entrega` + error
+        this.setAppError(message)
+      }
+    },
+    async getSupervisor(deliveryId) {
+      try {
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/extra-supervisor/${deliveryId}`
+
+        let res = await fetch(URL),
+          response = await res.json()
+        if (response.error) throw response
+        return response
+      } catch (error) {
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener supervisor de entrega` + error
+        this.setAppError(message)
       }
     },
   },
   async mounted() {
-    //Show Nav
-    this.$store.state.hideNav = false
+    let loader = loaderPage(this.$loading) //Loader desde validar
+    this.setManagementHideHeader(false)
+    this.setManagementActiveTab('informacion')
+    let { validate, pageToReturn } = await validateInfoPage()
+    if (validate.error) throw validate
 
-    let loaderManager = this.$loading.show({
-      // Optional parameters
-      container: document.querySelector(".manager"),
-      canCancel: false,
-      backgroundColor: "#ececec",
-      color: "rgb(27, 209, 155)",
-      height: "25",
+    if (validate.status == 'fail') {
+      this.visibleRedirectInfo = true
+      this.redirectInfoProps = {
+        tittle: validate.data.message,
+        detail: validate.data.details,
+        pageToReturn: pageToReturn,
+      }
+      loader.hide()
+      return
+    }
+    loader.hide()
 
-      onCancel: this.onCancel,
+    let loaderManager = loaderPage(this.$loading, '.manager', {
+      backgroundColor: '#ececec',
+    })
+    let loaderSupervisor = loaderPage(this.$loading, '.supervisor', {
+      backgroundColor: '#ececec',
     })
 
-    let loaderSupervisor = this.$loading.show({
-      // Optional parameters
-      container: document.querySelector(".supervisor"),
-      canCancel: false,
-      backgroundColor: "#ececec",
-      color: "rgb(27, 209, 155)",
-      height: "25",
-      onCancel: this.onCancel,
-    })
-    const deliveryDetails = await this.getDeliveryDetails()
-    if (typeof deliveryDetails === "undefined") return
+    //getClient
+    let responseClient = await this.getClient(this.deliveryId)
+    if (typeof responseClient === 'undefined') return
 
-    if (deliveryDetails !== null) {
-      this.addressee = deliveryDetails.client
-    } else {
-      alert("DeliveryId desconocido")
-      console.log("DeliveryId desconocido")
+    if (responseClient.status == 'success') {
+      this.client = responseClient.data.client
+    }
+    if (responseClient.status == 'fail') {
+      alert('DeliveryId desconocido')
     }
 
-    let manager = await this.getManager(this.deliveryId)
-    let supervisor = await this.getSupervisor(this.deliveryId)
+    if (process.env.NODE_ENV == 'production') {
+      //getManager
+      let responseManager = await this.getManager(this.deliveryId)
+      if (typeof responseManager == 'undefined') return
 
-    if (manager) {
-      this.manager = manager
-      loaderManager.hide()
-    }
-    if (supervisor) {
-      this.supervisor = supervisor
+      if (responseManager.status == 'success') {
+        this.manager = responseManager.data.manager
+        loaderManager.hide()
+      }
 
-      loaderSupervisor.hide()
+      if (responseManager.status == 'fail') {
+        this.manager = { cod: '×', name: '×', phone: '×' }
+        loaderManager.hide()
+      }
+
+      //getSupervisor
+      let responseSupervisor = await this.getSupervisor(this.deliveryId)
+      if (typeof responseSupervisor == 'undefined') return
+
+      if (responseSupervisor.status == 'success') {
+        this.supervisor = responseSupervisor.data.manager
+        loaderSupervisor.hide()
+      }
+
+      if (responseManager.status == 'fail') {
+        this.supervisor = { name: '×', phone: '×' }
+        loaderSupervisor.hide()
+      }
     }
   },
 }

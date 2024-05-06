@@ -12,15 +12,15 @@
       <div class="modal-content">
         <div class="modal-body">
           <div class="code">
-            <span>Cód: {{ dataItem.id }}</span>
+            <span>Cód: {{ orders.orderData.itemId }}</span>
           </div>
           <div class="modify">
             <p class="h6">Entregados</p>
             <div class="quantity">
               <i class="fa-solid fa-circle-minus" @click="decrementGiven"></i>
               <div class="num">
-                <span>{{ dataItem.given }} </span>
-                <span>{{ dataItem.ordered }}</span>
+                <span>{{ orders.orderData.given }} </span>
+                <small>de {{ orders.orderData.amount }}</small>
               </div>
               <i class="fa-solid fa-circle-plus" @click="incrementGiven"></i>
             </div>
@@ -28,73 +28,69 @@
         </div>
         <div class="d-flex w-100 justify-content-around">
           <button type="button" class="btn" data-dismiss="modal">Cerrar</button>
-          <button
-            type="button"
-            class="btn text-primary"
+
+          <SpinnerButton
+            classes="btn-light"
             data-dismiss="modal"
-            @click="deliveryItem"
-          >
-            Guardar
-          </button>
+            @click="deliveryOrder"
+            :loading="loadingSpinner"
+            text="Entregar"
+            textLoading="Entregando"
+          />
         </div>
       </div>
     </div>
   </div>
 </template>
 <script>
-import { mapState, mapMutations } from "vuex"
+import { mapState, mapMutations } from 'vuex'
+import SpinnerButton from '../SpinnerButton.vue'
 export default {
+  components: { SpinnerButton },
   data() {
     return {
-      deliveryId: localStorage.getItem("deliveryId"),
+      loadingSpinner: false,
     }
   },
 
   computed: {
-    ...mapState(["dataItem"]),
+    ...mapState(['orders']),
   },
   methods: {
-    ...mapMutations(["decrementGiven", "incrementGiven"]),
+    ...mapMutations(['setAppError', 'decrementGiven', 'incrementGiven']),
 
-    async putDeliveryItems() {
+    async createDelivered() {
       try {
-        if (this.dataItem.given <= 0) return
-
-        const URL = `${process.env.VUE_APP_API}/deliveryItems/${this.deliveryId}`
+        const URL = `${process.env.VUE_APP_API_DELIVERY}/delivered-order`
         let res = await fetch(URL, {
-            method: "put",
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + localStorage.getItem("token_user"),
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              cantidad: this.dataItem.given,
-              idItem: this.dataItem.id,
+              amount: this.orders.orderData.given,
+              orderId: this.orders.orderData.id,
             }),
           }),
-          json = await res.json()
-        return json
+          response = await res.json()
+
+        if (response.error) throw response
+        return response
       } catch (error) {
-        this.$emit("error", error)
+        let message =
+          error.statusText || `Error de Front: Al entregar pedido` + error
+        this.setAppError(message)
       }
     },
-    async deliveryItem() {
-      let loader = this.$loading.show({
-        // Optional parameters
-        container: false,
-        canCancel: false,
-        backgroundColor: "#ececec",
-        color: "rgb(27, 209, 155)",
-        height: "25",
+    async deliveryOrder() {
+      if (this.orders.orderData.given <= 0) return
 
-        onCancel: false,
-      })
+      this.loadingSpinner = true
+      let response = await this.createDelivered()
 
-      let deliveryItem = await this.putDeliveryItems()
-      console.log(deliveryItem)
-      if (typeof deliveryItem === "undefined") return
-      if (deliveryItem !== null) {
-        loader.hide()
+      if (typeof response === 'undefined') return
+      if (response.status == 'success') {
+        this.loadingSpinner = false
         location.reload()
       }
     },

@@ -1,6 +1,6 @@
 <template>
   <div class="py-2">
-    <router-link class="h3 mx-2" :to="`${back}`">
+    <router-link class="h3 mx-2" :to="{ name: pageName, params }">
       <i class="fa fa-arrow-left" aria-hidden="true"></i>
     </router-link>
   </div>
@@ -8,6 +8,6 @@
 
 <script>
 export default {
-  props: ["back"],
+  props: ['pageName', 'params'],
 }
 </script>

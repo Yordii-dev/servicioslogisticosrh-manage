@@ -1,69 +1,74 @@
-import { createRouter, createWebHistory } from "vue-router"
-import LoginView from "../views/LoginView.vue"
-import RouteView from "../views/RouteView.vue"
+import { createRouter, createWebHistory } from 'vue-router'
+import LoginView from '../views/LoginView.vue'
+import RouteView from '../views/RouteView.vue'
 
-import DeliveriesView from "../views/DeliveriesView.vue"
-import MultiMapView from "../views/MultiMapView.vue"
+import DeliveriesView from '../views/DeliveriesView.vue'
+import MultiMapView from '../views/MultiMapView.vue'
 
-import ManagementView from "../views/ManagementView.vue"
-import HandleView from "../views/HandleView.vue"
-import ItemsView from "../views/ItemsView.vue"
-import InfoView from "../views/InfoView.vue"
-import SingleMapView from "../views/SingleMapView.vue"
+import ManagementView from '../views/ManagementView.vue'
+import HandleView from '../views/HandleView.vue'
+import OrdersView from '../views/OrdersView.vue'
+import InfoView from '../views/InfoView.vue'
+import SingleMapView from '../views/SingleMapView.vue'
 
-import FormView from "../views/FormView.vue"
+import EvidenceView from '../views/EvidenceView.vue'
 
 const routes = [
   {
-    path: "/",
-    name: "",
+    path: '/:userId?',
+    name: 'login',
     component: LoginView,
   },
 
   {
-    path: "/route",
-    name: "route",
+    path: '/route',
+    name: 'route',
     component: RouteView,
   },
   {
-    path: "/deliveries",
-    name: "deliveries",
+    path: '/deliveries',
+    name: 'deliveries',
     component: DeliveriesView,
   },
   {
-    path: "/multiMap",
-    name: "multiMap",
+    path: '/multiMap',
+    name: 'multiMap',
     component: MultiMapView,
   },
   {
-    path: "/management",
-    name: "management",
+    path: '/management',
+    name: 'management',
     component: ManagementView,
     children: [
       {
-        path: "handle",
-        name: "handle",
+        path: '',
+        name: '',
         component: HandleView,
       },
       {
-        path: "info",
-        name: "info",
+        path: 'handle',
+        name: 'handle',
+        component: HandleView,
+      },
+      {
+        path: 'orders',
+        name: 'orders',
+        component: OrdersView,
+      },
+      {
+        path: 'evidence',
+        name: 'evidence',
+        component: EvidenceView,
+      },
+      {
+        path: 'info',
+        name: 'info',
         component: InfoView,
       },
       {
-        path: "items",
-        name: "items",
-        component: ItemsView,
-      },
-      {
-        path: "singleMap",
-        name: "singleMap",
+        path: 'singleMap',
+        name: 'singleMap',
         component: SingleMapView,
-      },
-      {
-        path: "form",
-        name: "form",
-        component: FormView,
       },
     ],
   },

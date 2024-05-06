@@ -1,34 +1,51 @@
 <template>
   <div class="container">
-    <RowBack back="management/info"></RowBack>
-    <ClientMap :coord="coord"></ClientMap>
+    <RedirectInfo
+      v-show="visibleRedirectInfo"
+      :tittle="redirectInfoProps.tittle"
+      :detail="redirectInfoProps.detail"
+      :pageToReturn="redirectInfoProps.pageToReturn"
+    />
+    <RowBack pageName="info"></RowBack>
+    <ClientMap></ClientMap>
   </div>
 </template>
 <script>
-import RowBack from "@/components/RowBack.vue"
-import ClientMap from "../components/maps/ClientMap.vue"
+import RowBack from '@/components/RowBack.vue'
+import ClientMap from '../components/maps/ClientMap.vue'
+import { mapMutations } from 'vuex'
+import { loaderPage } from '@/helpers/loaderPage'
+import { validateSinglemapPage } from '../validations/validateSinglemapPage'
+import RedirectInfo from '@/components/RedirectInfo.vue'
+
 export default {
-  components: { ClientMap, RowBack },
+  components: { ClientMap, RowBack, RedirectInfo },
   data() {
     return {
-      idDelivery: localStorage.getItem("selected-delivery"),
-      coord: [],
+      visibleRedirectInfo: false,
+      redirectInfoProps: {},
     }
   },
-  mounted() {
-    //Hidden Nav
-    this.$store.state.hideNav = true
+  methods: {
+    ...mapMutations(['setManagementHideHeader']),
+  },
+  async mounted() {
+    let loader = loaderPage(this.$loading) //Loader desde validar
+    this.setManagementHideHeader(true)
+    let { validate, pageToReturn } = await validateSinglemapPage()
+    if (validate.error) throw validate
 
-    const deliveries = JSON.parse(localStorage.getItem("deliveries"))
-    const delivery = deliveries.find((el) => el.id == this.idDelivery)
-    this.coord = {
-      lat: Number(delivery.compra.cliente.latitud),
-      lng: Number(delivery.compra.cliente.longitud),
-      name: delivery.compra.cliente.nombre,
-      address: delivery.compra.cliente.direccion,
-      phone: delivery.compra.cliente.telefono,
-      service_time: delivery.tiempo_servicio,
+    if (validate.status == 'fail') {
+      this.visibleRedirectInfo = true
+      this.redirectInfoProps = {
+        tittle: validate.data.message,
+        detail: validate.data.details,
+        pageToReturn: pageToReturn,
+      }
+      loader.hide()
+      return
     }
+    loader.hide()
   },
 }
 </script>

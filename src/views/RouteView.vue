@@ -1,6 +1,12 @@
 <template>
   <div class="container-start">
-    <RowBack class="container" back="/"></RowBack>
+    <RedirectInfo
+      v-show="visibleRedirectInfo"
+      :tittle="redirectInfoProps.tittle"
+      :detail="redirectInfoProps.detail"
+      :pageToReturn="redirectInfoProps.pageToReturn"
+    />
+    <RowBack class="container" pageName="login" :params="{ userId }"></RowBack>
 
     <div class="container-check position-relative">
       <div class="check d-flex flex-column align-items-center">
@@ -13,165 +19,236 @@
       >
         <div class="fecha d-flex justify-content-between">
           <span class="text-secondary">Fecha de Ruta</span>
-          <span :class="isStarted ? 'isStarted' : 'h6'">{{ startDate }}</span>
-        </div>
-        <div class="vehiculo d-flex justify-content-between">
-          <span class="text-secondary">Vehiculo</span>
-          <span :class="isStarted ? 'isStarted' : 'h6'">{{ vehicle }}</span>
-        </div>
-        <div class="entrega d-flex justify-content-between">
-          <span class="text-secondary">Entregas</span>
-
-          <span :class="isStarted ? 'isStarted' : 'h6'">{{
-            deliveriesAmount
+          <span :class="routeStarted ? 'routeStarted' : 'h6'">{{
+            startDate
           }}</span>
         </div>
         <div class="hora d-flex justify-content-between">
           <span class="text-secondary">Hora de Inicio</span>
-          <span :class="isStarted ? 'isStarted' : 'h6'">{{ startHour }}</span>
+          <span :class="routeStarted ? 'routeStarted' : 'h6'">{{
+            startTime
+          }}</span>
+        </div>
+        <div class="vehiculo d-flex justify-content-between">
+          <span class="text-secondary">Vehiculo</span>
+          <span :class="routeStarted ? 'routeStarted' : 'h6'">{{
+            patent
+          }}</span>
+        </div>
+        <div class="entrega d-flex justify-content-between">
+          <span class="text-secondary">Entregas</span>
+
+          <span :class="routeStarted ? 'routeStarted' : 'h6'">{{
+            totalDeliveries
+          }}</span>
         </div>
       </div>
-      <button
-        @click="href"
-        :disabled="deliveries == 0"
-        :class="deliveries == 0 ? 'bg-muted' : 'bg-primary text-white'"
-        class="h6 fixed-bottom text-center text-decoration-none p-3 border-0"
-      >
-        <span
-          class="spinner spinner-border spinner-border-sm"
-          :class="{ 'd-none': !spinnerButton }"
-          role="status"
-          aria-hidden="true"
-        ></span>
-        {{ isStarted ? "CONTINUAR RUTA" : "CONFIRMAR E INICIAR RUTA" }}
-      </button>
-    </div>
-    <div
-      v-show="error != false"
-      class="fixed-bottom alert-danger w-100 py-3 text-center"
-    >
-      {{ error }}
+      <SpinnerButton
+        @click="goToDeliveries"
+        classes="h6 fixed-bottom text-center text-decoration-none p-3 border-0"
+        :loading="loaderSpinner"
+        :text="routeStarted ? 'CONTINUAR RUTA' : 'CONFIRMAR E INICIAR RUTA'"
+        textLoading="PROCESANDO"
+      />
     </div>
   </div>
 </template>
 
 <script>
-import RowBack from "@/components/RowBack.vue"
+import { mapMutations } from 'vuex'
+import RowBack from '@/components/RowBack.vue'
+import SpinnerButton from '@/components/SpinnerButton.vue'
+import { loaderPage } from '@/helpers/loaderPage'
+import { actualDateTime, onlyDate, onlyTime } from '@/helpers/date'
+import { validateRoutePage } from '../validations/validateRoutePage'
+import RedirectInfo from '@/components/RedirectInfo.vue'
 
 export default {
-  components: { RowBack },
+  components: { RowBack, SpinnerButton, RedirectInfo },
   data() {
     return {
-      spinnerButton: false,
-      isStarted: false,
-      fullPage: true,
+      token: localStorage.getItem('token-operator'),
+      userId: localStorage.getItem('userId'), // For back button
+      loaderSpinner: false,
+      visibleRedirectInfo: false,
+      redirectInfoProps: {},
 
-      vehicle: "",
-      startDate: "",
-      deliveriesAmount: "",
-      startHour: "",
+      routeStarted: false,
 
-      error: false,
+      startDate: '',
+      startTime: onlyTime(actualDateTime()),
+      patent: '',
+      totalDeliveries: 0,
     }
   },
-  methods: {
-    actualDate() {
-      const now = new Date()
-      const offsetMs = now.getTimezoneOffset() * 60 * 1000
-      const dateLocal = new Date(now.getTime() - offsetMs)
-      const str = dateLocal
-        .toISOString()
-        .slice(0, 19)
-        .replace(/-/g, "-")
-        .replace("T", " ")
 
-      return str
+  methods: {
+    ...mapMutations(['setAppError']),
+    showLocaleTime() {
+      setInterval(() => {
+        this.startTime = new Date().toLocaleTimeString()
+      }, 1000)
+    },
+    getToken() {
+      return localStorage.getItem('token-operator')
+    },
+    async getThisOperator() {
+      try {
+        const URL = `${process.env.VUE_APP_API_OPERATOR}/operators-self`
+
+        let res = await fetch(URL, {
+            headers: {
+              Authorization: 'Bearer ' + this.token,
+            },
+          }),
+          response = await res.json()
+        if (response.error) throw response
+        return response
+      } catch (error) {
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener datos del actual operador`
+        this.setAppError(message)
+      }
+    },
+
+    async getTotalDeliveries() {
+      try {
+        const URL = `${process.env.VUE_APP_API_OPERATOR}/deliveries-total/latest`
+
+        let res = await fetch(URL, {
+            headers: {
+              Authorization: 'Bearer ' + this.token,
+            },
+          }),
+          response = await res.json()
+        if (response.error) throw response
+        return response
+      } catch (error) {
+        let message =
+          error.statusText ||
+          `Error de Front: Al obtener total de entregas: ${error}`
+        this.setAppError(message)
+      }
     },
 
     async getRoute() {
       try {
-        const URL = `${process.env.VUE_APP_API}/route`
+        const URL = `${process.env.VUE_APP_API_OPERATOR}/route/latest`
 
         let res = await fetch(URL, {
             headers: {
-              Authorization: "Bearer " + localStorage.getItem("token_user"),
+              Authorization: 'Bearer ' + this.token,
             },
           }),
-          json = await res.json()
-
-        return json
+          response = await res.json()
+        if (response.error) throw response
+        return response
       } catch (error) {
-        this.error = `Error al obtener informacion de ruta: ${error}`
+        let message =
+          error.statusText || `Error de Front: Al obtener ruta: ${error}`
+        this.setAppError(message)
       }
     },
-    async startRoute() {
+
+    async createRoute() {
       try {
-        const URL = `${process.env.VUE_APP_API}/route`
+        const URL = `${process.env.VUE_APP_API_OPERATOR}/route`
         let res = await fetch(URL, {
-            method: "PUT",
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + localStorage.getItem("token_user"),
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + this.getToken(),
             },
-
-            body: JSON.stringify({
-              fecha: this.startDate,
-              hora: this.startHour,
-            }),
+            body: JSON.stringify({ date: actualDateTime() }),
           }),
-          json = await res.json()
-        return json
+          response = await res.json()
+        if (response.error) throw response
+        return response
       } catch (error) {
-        this.error = `Error al iniciar ruta: ${error}`
+        let message =
+          error.statusText || `Error de Front: Al comenzar ruta: ${error}`
+        this.setAppError(message)
       }
     },
-    async href() {
-      this.spinnerButton = true
-      //Create route
-      if (this.isStarted == false) {
-        let route = await this.startRoute()
 
-        if (route.affectedRows > 0) {
+    async goToDeliveries() {
+      this.loaderSpinner = true
+      if (!this.routeStarted) {
+        //Create route
+        let response = await this.createRoute()
+
+        if (typeof response == 'undefined') return
+
+        if (response.status == 'success') {
           this.$router.push({ name: `deliveries` })
-        } else {
-          alert("No se puedo crear la ruta!")
+        }
+
+        if (response.status == 'fail') {
+          alert(`${response.data.message}: ${response.data.details[0]}`)
         }
       } else {
         //Continue route
         this.$router.push({ name: `deliveries` })
       }
-      this.spinnerButton = false
+      this.loaderSpinner = false
     },
   },
   async mounted() {
-    let loader = this.$loading.show({
-      // Optional parameters
-      container: document.querySelector(".container-check"),
-      canCancel: false,
-      color: "rgb(27, 209, 155)",
-      height: "40",
+    try {
+      let loader = loaderPage(this.$loading)
+      let { validate, pageToReturn } = await validateRoutePage()
 
-      onCancel: this.onCancel,
-    })
+      if (validate.error) throw validate
 
-    let route = await this.getRoute()
-    if (route === undefined) return
+      if (validate.status == 'fail') {
+        this.visibleRedirectInfo = true
+        this.redirectInfoProps = {
+          tittle: validate.data.message,
+          detail: validate.data.details,
+          pageToReturn: pageToReturn,
+        }
+        loader.hide()
+        return
+      }
 
-    if (route.startDate !== null) {
-      this.isStarted = true
+      //Get Vehicle
+      let responseOperator = await this.getThisOperator()
 
-      this.startDate = route.startDate.split("T")[0]
-      this.vehicle = route.vehicle
-      this.deliveriesAmount = route.deliveriesAmount
-      this.startHour = route.startHour
-    } else {
-      this.vehicle = route.vehicle
-      this.deliveriesAmount = route.deliveriesAmount
-      this.startDate = this.actualDate().split(" ")[0]
-      this.startHour = this.actualDate().split(" ")[1]
+      if (typeof responseOperator == 'undefined') return
+
+      if (responseOperator.status == 'success') {
+        this.patent = responseOperator.data.operator.patent
+      }
+
+      //Get Total Deliveries
+      let responseTotal = await this.getTotalDeliveries()
+      if (typeof responseTotal == 'undefined') return
+      if (responseTotal.status == 'success') {
+        this.totalDeliveries = responseTotal.data.total
+      }
+
+      //Get Route
+      let response = await this.getRoute()
+
+      if (typeof response === 'undefined') return
+
+      if (response.status == 'success') {
+        this.routeStarted = true
+        this.startDate = onlyDate(response.data.route.date)
+        this.startTime = onlyTime(response.data.route.date)
+      }
+
+      if (response.status == 'fail') {
+        this.startDate = onlyDate(actualDateTime())
+        this.showLocaleTime() //StartTime in real time
+      }
+      loader.hide()
+    } catch (error) {
+      let message =
+        error.statusText || 'Error de Front: Al montar pagina ruta' + error
+      this.setAppError(message)
     }
-
-    loader.hide()
   },
 }
 </script>
@@ -195,7 +272,7 @@ export default {
   flex-basis: 50%;
 }
 
-.isStarted {
+.routeStarted {
   font-weight: 100 !important;
 }
 </style>

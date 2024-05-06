@@ -4,35 +4,33 @@
     data-toggle="modal"
     data-target="#modifyModal"
     @click="
-      setDatatItem({
-        id: item.id,
-        given: item.given,
-        ordered: item.ordered,
+      setOrderData({
+        id: order.id,
+        itemId: order.itemId,
+        given: order.given,
+        amount: order.amount,
       })
     "
   >
     <div>
-      <p class="name">{{ item.name }}</p>
-      <p class="code mt-2">{{ item.id }}</p>
+      <p class="name">{{ order.name }}</p>
+      <p class="code mt-2">{{ order.itemId }}</p>
     </div>
     <p class="digit">
-      <span :class="{ 'text-success h6': item.given > 0 }">
-        {{ item.given }} </span
-      >/{{ item.ordered }}
+      <span :class="{ 'text-success h6': order.given > 0 }">
+        {{ order.given }} </span
+      >/{{ order.amount }}
     </p>
   </div>
 </template>
 
 <script>
-import { mapMutations, mapState } from "vuex"
+import { mapMutations } from 'vuex'
 export default {
-  name: "ItemDelivery",
-  props: ["item"],
-  computed: {
-    ...mapState(["datatItem"]),
-  },
+  name: 'ItemDelivery',
+  props: ['order'],
   methods: {
-    ...mapMutations(["setDatatItem"]),
+    ...mapMutations(['setOrderData']),
   },
 }
 </script>
