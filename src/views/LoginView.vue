@@ -35,7 +35,7 @@
             </select>
 
             <small class="vehicleHelp form-text text-muted text-right">{{
-              operators.length == 0 && isFetch ? 'Sin vehiculos' : ''
+              operators.length == 0 && isFetch ? "Sin vehiculos" : ""
             }}</small>
           </div>
           <br />
@@ -52,7 +52,7 @@
               v-if="isFetchUsers"
               class="pinHelp"
               :class="userExist && isFetchUsers ? '' : 'text-danger'"
-              >{{ userExist && isFetchUsers ? '' : 'Pin desconocido' }}</small
+              >{{ userExist && isFetchUsers ? "" : "Pin desconocido" }}</small
             >
           </div>
         </div>
@@ -76,8 +76,8 @@
   </div>
 </template>
 <script>
-import noData from '../components/noData.vue'
-import { mapMutations } from 'vuex'
+import noData from "../components/noData.vue";
+import { mapMutations } from "vuex";
 export default {
   components: { noData },
   data() {
@@ -91,115 +91,115 @@ export default {
 
       vehicleId: null,
       pin: null,
-    }
+    };
   },
   methods: {
-    ...mapMutations(['setAppError']),
+    ...mapMutations(["setAppError"]),
 
     async signIn() {
       try {
-        const URL = `${process.env.VUE_APP_API_OPERATOR}/signin`
+        const URL = `${process.env.VUE_APP_API_OPERATOR}/signin`;
         let res = await fetch(URL, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({ vehicleId: this.vehicleId, pin: this.pin }),
           }),
-          response = await res.json()
-        if (response.error) throw response
-        return response
+          response = await res.json();
+        if (response.error) throw response;
+        return response;
       } catch (error) {
         let message =
-          error.statusText || `Error de Front: Al iniciar sesion: ${error}`
-        this.setAppError(message)
+          error.statusText || `Error de Front: Al iniciar sesion: ${error}`;
+        this.setAppError(message);
       }
     },
     async validate() {
-      this.spinnerButton = true
+      this.spinnerButton = true;
 
-      let response = await this.signIn()
+      let response = await this.signIn();
 
-      if (typeof response === 'undefined') return
+      if (typeof response === "undefined") return;
 
-      if (response.status == 'success') {
-        this.userExist = true
-        localStorage.setItem('token-operator', response.data.token)
-        this.$router.push({ name: `route` })
+      if (response.status == "success") {
+        this.userExist = true;
+        localStorage.setItem("token-operator", response.data.token);
+        this.$router.push({ name: `route` });
       }
 
-      this.isFetchUsers = true
-      this.spinnerButton = false
+      this.isFetchUsers = true;
+      this.spinnerButton = false;
     },
     getUserIdFromUrl() {
-      return this.$route.params.userId
+      return this.$route.params.userId;
     },
     async getUser(userId) {
       try {
-        const URL = `${process.env.VUE_APP_API_USER}/users/${userId}`
+        const URL = `${process.env.VUE_APP_API_USER}/users/${userId}`;
         let res = await fetch(URL),
-          response = await res.json()
-        this.isFetch = true
-        if (response.error) throw response
+          response = await res.json();
+        this.isFetch = true;
+        if (response.error) throw response;
 
-        return response
+        return response;
       } catch (error) {
         let message =
-          error.statusText || 'Error de Front: Al obtener usuario de local'
-        this.setAppError(message)
+          error.statusText || "Error de Front: Al obtener usuario de local";
+        this.setAppError(message);
       }
     },
     async existsUser(userId) {
-      let responseUser = await this.getUser(userId)
+      let responseUser = await this.getUser(userId);
 
-      if (typeof responseUser === 'undefined') return
+      if (typeof responseUser === "undefined") return;
 
-      if (responseUser.status == 'success') return true
+      if (responseUser.status == "success") return true;
 
-      return false
+      return false;
     },
     async getActiveOperators(userId) {
       try {
-        const URL = `${process.env.VUE_APP_API_USER}/operators/A/${userId}`
+        const URL = `${process.env.VUE_APP_API_USER}/operators/A/${userId}`;
         let res = await fetch(URL),
-          response = await res.json()
-        this.isFetch = true
-        if (response.error) throw response
+          response = await res.json();
+        this.isFetch = true;
+        if (response.error) throw response;
 
-        return response
+        return response;
       } catch (error) {
         let message =
           error.statusText ||
-          'Error de Front: Al obtener vehiculos de operadores activos'
-        this.setAppError(message)
+          "Error de Front: Al obtener vehiculos de operadores activos";
+        this.setAppError(message);
       }
     },
   },
   async mounted() {
-    let userId = this.getUserIdFromUrl()
+    let userId = this.getUserIdFromUrl();
     if (!userId) {
-      this.textNoData = 'Espacio de trabajo no especificado'
-      return
+      this.textNoData = "Espacio de trabajo no especificado";
+      return;
     }
 
-    localStorage.setItem('userId', userId) // for button 'back' of router
+    localStorage.setItem("userId", userId); // for button 'back' of router
 
-    let exists = await this.existsUser(userId)
+    let exists = await this.existsUser(userId);
 
     if (!exists) {
-      this.textNoData = 'Espacio de trabajo desconocido'
-      return
+      this.textNoData = "Espacio de trabajo desconocido";
+      return;
     }
 
     //Get active operators
-    let response = await this.getActiveOperators(userId)
-    if (typeof response === 'undefined') return
+    let response = await this.getActiveOperators(userId);
+    if (typeof response === "undefined") return;
 
-    if (response.status == 'success') {
-      this.operators = response.data.operators
+    if (response.status == "success") {
+      this.operators = response.data.operators;
     }
   },
-}
+};
 </script>
 
 <style scoped>
@@ -208,7 +208,7 @@ export default {
   left: 0;
   right: 0;
   height: 100%;
-  background: #ffffef url('../assets/bg-login.jpeg') no-repeat top;
+  background: #ffffef url("../assets/bg-login.jpeg") no-repeat top;
   background-size: cover;
 }
 form {
